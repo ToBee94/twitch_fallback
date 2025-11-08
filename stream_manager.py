@@ -129,31 +129,19 @@ class StreamManager:
             return False
 
     def _build_audio_encoding_options(self):
-        """Build audio encoding options for multi-track support"""
+        """Build audio encoding options for all 3 audio tracks from OBS"""
         options = []
 
-        if self.config.get('multi_audio_enabled', False):
-            # Multi-track audio (Twitch Partner feature)
-            num_tracks = min(self.config.get('audio_tracks', 1), 3)  # Twitch supports max 3 tracks
-
-            for i in range(num_tracks):
-                # Map audio stream
-                options.extend(['-map', f'0:a:{i}?'])  # ? makes it optional
-
-                # Audio encoding per track
-                options.extend([
-                    f'-c:a:{i}', 'aac',
-                    f'-b:a:{i}', self.config['audio_bitrate'],
-                    f'-ar:{i}', '44100',
-                    f'-ac:{i}', '2'
-                ])
-        else:
-            # Single audio track (standard)
+        # Always encode 3 audio tracks (Twitch Partner multi-audio)
+        # Track 0: Stream + VOD
+        # Track 1: Stream only (muted in VOD)
+        # Track 2: VOD only (muted in stream)
+        for i in range(3):
             options.extend([
-                '-c:a', 'aac',
-                '-b:a', self.config['audio_bitrate'],
-                '-ar', '44100',
-                '-ac', '2'
+                f'-c:a:{i}', 'aac',
+                f'-b:a:{i}', self.config['audio_bitrate'],
+                f'-ar:{i}', '44100',
+                f'-ac:{i}', '2'
             ])
 
         return options
@@ -175,10 +163,12 @@ class StreamManager:
             for audio_source in self.config.get('audio_sources', []):
                 cmd.extend(['-i', audio_source])
 
-            # Map only first video and first audio stream (avoid codec issues with multiple tracks)
+            # Map video and all audio streams
             cmd.extend([
-                '-map', '0:v:0',
-                '-map', '0:a:0',
+                '-map', '0:v:0',  # First video stream
+                '-map', '0:a:0',  # First audio stream
+                '-map', '0:a:1?',  # Second audio stream (optional)
+                '-map', '0:a:2?',  # Third audio stream (optional)
             ])
 
             # Video encoding
