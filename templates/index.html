@@ -8,10 +8,10 @@
 
     <div id="status-container">
         <div style="display: flex; align-items: center; margin-bottom: 20px;">
-            <span class="status-indicator {% if status.running %}{% if status.source == 'rtsp' %}status-running{% else %}status-fallback{% endif %}{% else %}status-stopped{% endif %}"></span>
+            <span class="status-indicator {% if status.running %}{% if status.source == 'rtmp' %}status-running{% else %}status-fallback{% endif %}{% else %}status-stopped{% endif %}"></span>
             <span id="status-text" style="font-size: 18px; font-weight: 500;">
                 {% if status.running %}
-                    Stream läuft (Quelle: {{ 'RTSP' if status.source == 'rtsp' else 'Fallback' }})
+                    Stream läuft (Quelle: {{ 'RTMP (OBS)' if status.source == 'rtmp' else 'Fallback' }})
                 {% else %}
                     Stream gestoppt
                 {% endif %}
@@ -21,7 +21,7 @@
         <div id="stream-info" style="margin-bottom: 20px;">
             {% if status.running %}
                 <div class="alert alert-info">
-                    <strong>RTSP-Stream:</strong> {{ 'Verfügbar' if status.rtsp_available else 'Nicht verfügbar' }}
+                    <strong>RTMP-Stream (OBS):</strong> {{ 'Verfügbar' if status.rtmp_available else 'Nicht verfügbar' }}
                 </div>
             {% endif %}
         </div>
@@ -48,8 +48,8 @@
             <h3 style="font-size: 16px; margin-bottom: 10px; color: #667eea;">Stream-Einstellungen</h3>
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="padding: 8px 0; color: #666;">RTSP URL:</td>
-                    <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{{ config.rtsp_url }}</td>
+                    <td style="padding: 8px 0; color: #666;">RTMP Input (OBS):</td>
+                    <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{{ config.rtmp_input_url }}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Twitch RTMP:</td>
@@ -106,8 +106,8 @@
             <h3 style="font-size: 16px; margin-bottom: 10px; color: #667eea;">Erweiterte Einstellungen</h3>
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="padding: 8px 0; color: #666;">RTSP Timeout:</td>
-                    <td style="padding: 8px 0;">{{ config.rtsp_timeout }}s</td>
+                    <td style="padding: 8px 0; color: #666;">RTMP Timeout:</td>
+                    <td style="padding: 8px 0;">{{ config.rtmp_timeout }}s</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Check Interval:</td>
@@ -183,9 +183,9 @@
                     startBtn.disabled = true;
                     stopBtn.disabled = false;
 
-                    if (data.source === 'rtsp') {
+                    if (data.source === 'rtmp') {
                         indicator.className = 'status-indicator status-running';
-                        statusText.textContent = 'Stream läuft (Quelle: RTSP)';
+                        statusText.textContent = 'Stream läuft (Quelle: RTMP (OBS))';
                     } else {
                         indicator.className = 'status-indicator status-fallback';
                         statusText.textContent = 'Stream läuft (Quelle: Fallback)';
@@ -193,7 +193,7 @@
 
                     streamInfo.innerHTML = `
                         <div class="alert alert-info">
-                            <strong>RTSP-Stream:</strong> ${data.rtsp_available ? 'Verfügbar' : 'Nicht verfügbar'}
+                            <strong>RTMP-Stream (OBS):</strong> ${data.rtmp_available ? 'Verfügbar' : 'Nicht verfügbar'}
                         </div>
                     `;
                 } else {

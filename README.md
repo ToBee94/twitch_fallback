@@ -1,16 +1,16 @@
 # Twitch Stream Manager mit Fallback
 
-Ein professioneller Stream Manager, der RTSP-Streams von OBS zu Twitch weiterleitet und bei Unterbrechungen automatisch ein Fallback-Bild oder -Video abspielt.
+Ein professioneller Stream Manager, der RTMP-Streams von OBS zu Twitch weiterleitet und bei Unterbrechungen automatisch ein Fallback-Bild oder -Video abspielt.
 
 ## Features
 
-- 🎥 **RTSP zu Twitch**: Leitet RTSP-Streams (z.B. von OBS) nahtlos an Twitch weiter
+- 🎥 **OBS zu Twitch**: Leitet RTMP-Streams von OBS nahtlos an Twitch weiter
 - 🔄 **Automatischer Fallback**: Wechselt bei Stream-Unterbrechung zu Fallback-Media (Bild oder Video)
 - 🎵 **Multi-Audio-Tracks**: Separate Tonspuren für Stream und VOD (Twitch Partner)
 - 🌐 **Web-Interface**: Benutzerfreundliche Browser-Konfiguration
 - 📁 **Media-Galerie**: Upload und Verwaltung von Fallback-Bildern und -Videos
 - 🔒 **Authentifizierung**: Login-Schutz für die Web-UI (geplant)
-- 🔑 **Token-Schutz**: RTSP-Stream-Schutz mit Token (geplant)
+- 🔑 **Token-Schutz**: RTMP-Stream-Schutz mit Token (geplant)
 - 🚀 **Nahtloses Streaming**: Keine Unterbrechungen bei Twitch durch lokalen RTMP-Buffer
 - 🐳 **Docker**: Einfaches Deployment mit Docker Compose
 
@@ -18,16 +18,16 @@ Ein professioneller Stream Manager, der RTSP-Streams von OBS zu Twitch weiterlei
 
 Die Anwendung nutzt einen 2-Stufen-Ansatz für nahtloses Streaming:
 
-1. **Input-Stream** (RTSP oder Fallback) → **Lokaler RTMP-Server**
-2. **Lokaler RTMP-Server** → **Twitch** (läuft kontinuierlich)
+1. **OBS** → **Lokaler RTMP-Server** (input app)
+2. **Stream Manager** liest von **Lokaler RTMP-Server** oder nutzt **Fallback** → **Twitch**
 
-Beim Wechsel zwischen RTSP und Fallback wird nur der Input-Stream gewechselt, während der Output zu Twitch durchgehend läuft.
+Beim Wechsel zwischen OBS-Stream und Fallback wird nur die Input-Quelle gewechselt, während der Output zu Twitch durchgehend läuft.
 
 ## Voraussetzungen
 
 - Docker und Docker Compose
 - Twitch-Account mit Stream Key
-- OBS oder andere RTSP-Quelle (optional)
+- OBS Studio (oder andere RTMP-fähige Streaming-Software)
 
 ## Installation
 
@@ -43,13 +43,13 @@ cd twitch_fallback
 Erstelle eine `config.yml` Datei (siehe `config.example.yml`):
 
 ```yaml
-rtsp_url: 'rtsp://localhost:8554/live'
+rtmp_input_url: 'rtmp://rtmp:1935/input/obs'
 twitch_rtmp_url: 'rtmp://live.twitch.tv/app'
 twitch_stream_key: 'DEIN_TWITCH_STREAM_KEY'
 fallback_type: 'image'  # 'image' oder 'video'
 fallback_image: 'media/fallback.jpg'
 fallback_video: 'media/fallback.mp4'
-rtsp_timeout: 5
+rtmp_timeout: 5
 check_interval: 2
 video_bitrate: '2500k'
 audio_bitrate: '160k'
@@ -86,22 +86,20 @@ Die Web-UI ist nun unter `http://localhost:5000` erreichbar.
 3. Gehe zu **Medien** um Fallback-Bilder/-Videos hochzuladen
 4. Starte den Stream im **Dashboard**
 
-### OBS RTSP-Server einrichten
+### OBS einrichten
 
-Um OBS als RTSP-Quelle zu nutzen, benötigst du ein RTSP-Plugin:
+Konfiguriere OBS, um zum lokalen RTMP-Server zu streamen:
 
-**Option 1: OBS WebRTC/WHIP**
-- Nutze das obs-websocket Plugin mit RTSP-Server
+1. **Öffne OBS Studio**
+2. **Gehe zu Einstellungen → Stream**
+3. **Wähle "Custom" als Service**
+4. **Server:** `rtmp://localhost:1935/input`
+5. **Stream Key:** `obs`
+6. **Klicke auf "OK" und "Streaming starten"**
 
-**Option 2: Mediamtx (ehemals rtsp-simple-server)**
-1. Installiere [Mediamtx](https://github.com/bluenviron/mediamtx)
-2. Starte den RTSP-Server
-3. Konfiguriere OBS, um über RTMP zu Mediamtx zu streamen
-4. Mediamtx stellt den Stream dann per RTSP bereit
-
-**Option 3: Direkt über nginx-rtmp**
-- Streame von OBS direkt zum lokalen RTMP-Server (Port 1935)
-- Die Anwendung übernimmt dann automatisch
+**Für Docker (wenn OBS auf anderem Rechner läuft):**
+- Ersetze `localhost` mit der IP-Adresse des Docker-Hosts
+- Stelle sicher, dass Port 1935 von außen erreichbar ist
 
 ### Empfohlene Twitch-Einstellungen
 
@@ -135,8 +133,8 @@ audio_sources:
   - 'audio=Desktop'   # Desktop-Audio
 ```
 
-**RTSP-Anforderung:**
-Der RTSP-Stream muss mehrere Audiostreams enthalten. Bei OBS kann dies über Audio-Mixer konfiguriert werden.
+**OBS-Konfiguration:**
+Der RTMP-Stream von OBS muss mehrere Audiostreams enthalten. In OBS kann dies über die Audio-Mixer-Einstellungen und erweiterte Audio-Eigenschaften konfiguriert werden (separate Tracks für verschiedene Audioquellen).
 
 ## API-Endpunkte
 
@@ -202,12 +200,14 @@ twitch_fallback/
    docker-compose logs -f stream_manager
    ```
 
-2. Stelle sicher, dass der RTSP-Stream erreichbar ist:
+2. Stelle sicher, dass der RTMP-Stream von OBS erreichbar ist:
    ```bash
-   ffprobe rtsp://localhost:8554/live
+   ffprobe rtmp://localhost:1935/input/obs
    ```
 
 3. Prüfe die Twitch-Stream-Key Konfiguration
+
+4. Stelle sicher, dass OBS zum richtigen RTMP-Server streamt
 
 ### Fallback funktioniert nicht
 
@@ -266,7 +266,7 @@ pytest tests/integration
 - ✅ Nahtloses Streaming
 - ✅ Multi-Audio-Track Support (Twitch Partner)
 - ⏳ Authentifizierung (Username/Password)
-- ⏳ RTSP Token-Schutz
+- ⏳ RTMP Token-Schutz
 - ⏳ Multi-Platform Streaming (YouTube, Facebook, etc.)
 - ⏳ Stream-Aufzeichnung
 - ⏳ Stream-Statistiken und Analytics

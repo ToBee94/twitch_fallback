@@ -78,9 +78,9 @@
             <h3>Stream-Quellen</h3>
 
             <div class="form-group">
-                <label for="rtsp_url">RTSP URL (OBS)</label>
-                <input type="text" id="rtsp_url" name="rtsp_url" value="{{ config.rtsp_url }}" required>
-                <small>Die RTSP-URL von deinem OBS-Stream (z.B. rtsp://localhost:8554/live)</small>
+                <label for="rtmp_input_url">RTMP Input URL (OBS)</label>
+                <input type="text" id="rtmp_input_url" name="rtmp_input_url" value="{{ config.rtmp_input_url }}" required>
+                <small>Die RTMP-URL wo OBS hinstreamt (z.B. rtmp://rtmp:1935/input/obs)</small>
             </div>
 
             <div class="form-group">
@@ -170,15 +170,15 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="rtsp_timeout">RTSP Timeout (Sekunden)</label>
-                    <input type="number" id="rtsp_timeout" name="rtsp_timeout" value="{{ config.rtsp_timeout }}" min="1" max="30" required>
-                    <small>Timeout für RTSP-Verbindung (1-30 Sekunden)</small>
+                    <label for="rtmp_timeout">RTMP Timeout (Sekunden)</label>
+                    <input type="number" id="rtmp_timeout" name="rtmp_timeout" value="{{ config.rtmp_timeout }}" min="1" max="30" required>
+                    <small>Timeout für RTMP-Verbindung (1-30 Sekunden)</small>
                 </div>
 
                 <div class="form-group">
                     <label for="check_interval">Check Interval (Sekunden)</label>
                     <input type="number" id="check_interval" name="check_interval" value="{{ config.check_interval }}" min="1" max="10" required>
-                    <small>Wie oft RTSP-Verfügbarkeit geprüft wird (1-10 Sekunden)</small>
+                    <small>Wie oft RTMP-Verfügbarkeit geprüft wird (1-10 Sekunden)</small>
                 </div>
             </div>
         </div>

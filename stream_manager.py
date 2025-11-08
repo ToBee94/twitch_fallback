@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Twitch Stream Manager with RTSP Input and Fallback
-Forwards RTSP stream to Twitch and uses fallback media on interruption
+Twitch Stream Manager with RTMP Input and Fallback
+Forwards RTMP stream from OBS to Twitch and uses fallback media on interruption
 Uses local RTMP server for seamless switching
 """
 
@@ -26,10 +26,10 @@ class StreamManager:
     def __init__(self, config_path='config.yml'):
         """Initialize Stream Manager with configuration"""
         self.config = self._load_config(config_path)
-        self.input_process = None  # RTSP or Fallback to local RTMP
+        self.input_process = None  # RTMP from OBS or Fallback to local RTMP
         self.relay_process = None  # Local RTMP to Twitch (always running)
         self.shutdown_event = Event()
-        self.is_rtsp_active = False
+        self.is_rtmp_input_active = False
         self.local_rtmp = 'rtmp://rtmp:1935/live'  # Docker service name
 
         # Signal handler for clean shutdown
@@ -42,7 +42,7 @@ class StreamManager:
             config = yaml.safe_load(f)
 
         # Validate required configurations
-        required = ['rtsp_url', 'twitch_rtmp_url', 'twitch_stream_key']
+        required = ['rtmp_input_url', 'twitch_rtmp_url', 'twitch_stream_key']
         for key in required:
             if key not in config:
                 raise ValueError(f"Missing configuration: {key}")
@@ -51,7 +51,7 @@ class StreamManager:
         config.setdefault('fallback_type', 'image')  # 'image' or 'video'
         config.setdefault('fallback_image', 'media/fallback.jpg')
         config.setdefault('fallback_video', 'media/fallback.mp4')
-        config.setdefault('rtsp_timeout', 5)  # seconds
+        config.setdefault('rtmp_timeout', 5)  # seconds
         config.setdefault('check_interval', 2)  # seconds
         config.setdefault('video_bitrate', '2500k')
         config.setdefault('audio_bitrate', '160k')
@@ -86,16 +86,15 @@ class StreamManager:
 
         sys.exit(0)
 
-    def check_rtsp_stream(self):
-        """Check if RTSP stream is available"""
+    def check_rtmp_stream(self):
+        """Check if RTMP stream from OBS is available"""
         try:
-            # Use ffprobe to check stream
+            # Use ffprobe to check RTMP stream
             cmd = [
                 'ffprobe',
                 '-v', 'error',
-                '-rtsp_transport', 'tcp',
-                '-timeout', str(self.config['rtsp_timeout'] * 1000000),  # microseconds
-                '-i', self.config['rtsp_url'],
+                '-timeout', str(self.config['rtmp_timeout'] * 1000000),  # microseconds
+                '-i', self.config['rtmp_input_url'],
                 '-show_entries', 'stream=codec_type',
                 '-of', 'default=noprint_wrappers=1'
             ]
@@ -104,12 +103,12 @@ class StreamManager:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                timeout=self.config['rtsp_timeout'] + 2
+                timeout=self.config['rtmp_timeout'] + 2
             )
 
             return result.returncode == 0
         except Exception as e:
-            logger.debug(f"RTSP check failed: {e}")
+            logger.debug(f"RTMP input check failed: {e}")
             return False
 
     def _build_audio_encoding_options(self):
@@ -142,15 +141,14 @@ class StreamManager:
 
         return options
 
-    def build_input_command(self, use_rtsp=True):
-        """Build FFmpeg command for RTSP or fallback to local RTMP"""
-        if use_rtsp:
-            # RTSP stream to local RTMP
+    def build_input_command(self, use_rtmp_input=True):
+        """Build FFmpeg command for RTMP input from OBS or fallback to local RTMP"""
+        if use_rtmp_input:
+            # RTMP stream from OBS to local RTMP buffer
             cmd = [
                 'ffmpeg',
-                '-rtsp_transport', 'tcp',
-                '-timeout', str(self.config['rtsp_timeout'] * 1000000),
-                '-i', self.config['rtsp_url'],
+                '-timeout', str(self.config['rtmp_timeout'] * 1000000),
+                '-i', self.config['rtmp_input_url'],
             ]
 
             # Add additional audio sources if configured
@@ -268,8 +266,8 @@ class StreamManager:
 
         return cmd
 
-    def start_input_stream(self, use_rtsp=True):
-        """Start input FFmpeg process (RTSP or Fallback to local RTMP)"""
+    def start_input_stream(self, use_rtmp_input=True):
+        """Start input FFmpeg process (RTMP from OBS or Fallback to local RTMP)"""
         if self.input_process:
             logger.info("Stopping current input stream...")
             self.input_process.terminate()
@@ -278,8 +276,8 @@ class StreamManager:
             except subprocess.TimeoutExpired:
                 self.input_process.kill()
 
-        cmd = self.build_input_command(use_rtsp)
-        source = "RTSP" if use_rtsp else "Fallback"
+        cmd = self.build_input_command(use_rtmp_input)
+        source = "RTMP (OBS)" if use_rtmp_input else "Fallback"
         logger.info(f"Starting input stream from {source}...")
         logger.debug(f"FFmpeg command: {' '.join(cmd)}")
 
@@ -290,7 +288,7 @@ class StreamManager:
             stdin=subprocess.PIPE
         )
 
-        self.is_rtsp_active = use_rtsp
+        self.is_rtmp_input_active = use_rtmp_input
         return self.input_process
 
     def start_relay_stream(self):
@@ -316,26 +314,26 @@ class StreamManager:
         return self.relay_process
 
     def monitor_stream(self):
-        """Monitor stream and switch between RTSP and fallback"""
+        """Monitor stream and switch between RTMP input and fallback"""
         logger.info("Stream monitoring started")
 
         while not self.shutdown_event.is_set():
-            rtsp_available = self.check_rtsp_stream()
+            rtmp_available = self.check_rtmp_stream()
 
-            # Switch to RTSP if available and not active
-            if rtsp_available and not self.is_rtsp_active:
-                logger.info("RTSP stream detected, switching from fallback to RTSP...")
-                self.start_input_stream(use_rtsp=True)
+            # Switch to RTMP input if available and not active
+            if rtmp_available and not self.is_rtmp_input_active:
+                logger.info("RTMP stream from OBS detected, switching from fallback to RTMP...")
+                self.start_input_stream(use_rtmp_input=True)
 
-            # Switch to fallback if RTSP not available but active
-            elif not rtsp_available and self.is_rtsp_active:
-                logger.warning("RTSP stream lost, switching to fallback...")
-                self.start_input_stream(use_rtsp=False)
+            # Switch to fallback if RTMP not available but active
+            elif not rtmp_available and self.is_rtmp_input_active:
+                logger.warning("RTMP stream from OBS lost, switching to fallback...")
+                self.start_input_stream(use_rtmp_input=False)
 
             # Check if input process is still running
             if self.input_process and self.input_process.poll() is not None:
                 logger.error("Input FFmpeg process unexpectedly terminated, restarting...")
-                self.start_input_stream(use_rtsp=rtsp_available)
+                self.start_input_stream(use_rtmp_input=rtmp_available)
 
             # Check if relay process is still running (critical!)
             if self.relay_process and self.relay_process.poll() is not None:
@@ -349,15 +347,15 @@ class StreamManager:
         logger.info("Starting Twitch Stream Manager...")
 
         # Determine initial stream source
-        rtsp_available = self.check_rtsp_stream()
+        rtmp_available = self.check_rtmp_stream()
 
-        # Start input stream (RTSP or fallback)
-        if rtsp_available:
-            logger.info("RTSP stream available, starting with RTSP...")
-            self.start_input_stream(use_rtsp=True)
+        # Start input stream (RTMP from OBS or fallback)
+        if rtmp_available:
+            logger.info("RTMP stream from OBS available, starting with RTMP input...")
+            self.start_input_stream(use_rtmp_input=True)
         else:
-            logger.info("RTSP stream not available, starting with fallback...")
-            self.start_input_stream(use_rtsp=False)
+            logger.info("RTMP stream from OBS not available, starting with fallback...")
+            self.start_input_stream(use_rtmp_input=False)
 
         # Start relay stream to Twitch (runs continuously)
         self.start_relay_stream()

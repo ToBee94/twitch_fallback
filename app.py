@@ -49,13 +49,13 @@ def load_config():
     else:
         # Default configuration
         return {
-            'rtsp_url': 'rtsp://localhost:8554/live',
+            'rtmp_input_url': 'rtmp://rtmp:1935/input/obs',
             'twitch_rtmp_url': 'rtmp://live.twitch.tv/app',
             'twitch_stream_key': '',
             'fallback_type': 'image',
             'fallback_image': 'media/fallback.jpg',
             'fallback_video': 'media/fallback.mp4',
-            'rtsp_timeout': 5,
+            'rtmp_timeout': 5,
             'check_interval': 2,
             'video_bitrate': '2500k',
             'audio_bitrate': '160k',
@@ -78,13 +78,13 @@ def get_stream_status():
         return {
             'running': False,
             'source': 'none',
-            'rtsp_available': False
+            'rtmp_available': False
         }
 
     return {
         'running': True,
-        'source': 'rtsp' if stream_manager.is_rtsp_active else 'fallback',
-        'rtsp_available': stream_manager.check_rtsp_stream()
+        'source': 'rtmp' if stream_manager.is_rtmp_input_active else 'fallback',
+        'rtmp_available': stream_manager.check_rtmp_stream()
     }
 
 
@@ -138,13 +138,13 @@ def config():
     if request.method == 'POST':
         # Save new configuration
         new_config = {
-            'rtsp_url': request.form.get('rtsp_url'),
+            'rtmp_input_url': request.form.get('rtmp_input_url'),
             'twitch_rtmp_url': request.form.get('twitch_rtmp_url'),
             'twitch_stream_key': request.form.get('twitch_stream_key'),
             'fallback_type': request.form.get('fallback_type'),
             'fallback_image': request.form.get('fallback_image'),
             'fallback_video': request.form.get('fallback_video'),
-            'rtsp_timeout': int(request.form.get('rtsp_timeout', 5)),
+            'rtmp_timeout': int(request.form.get('rtmp_timeout', 5)),
             'check_interval': int(request.form.get('check_interval', 2)),
             'video_bitrate': request.form.get('video_bitrate'),
             'audio_bitrate': request.form.get('audio_bitrate'),

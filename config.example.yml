@@ -1,7 +1,10 @@
 # Twitch Stream Manager Configuration
 
-# RTSP Input Configuration (from OBS or other source)
-rtsp_url: 'rtsp://localhost:8554/live'
+# RTMP Input Configuration (from OBS)
+# In OBS: Settings → Stream → Service: Custom
+#         Server: rtmp://localhost:1935/input
+#         Stream Key: obs
+rtmp_input_url: 'rtmp://rtmp:1935/input/obs'
 
 # Twitch Streaming Configuration
 twitch_rtmp_url: 'rtmp://live.twitch.tv/app'
@@ -13,8 +16,8 @@ fallback_image: 'media/fallback.jpg'
 fallback_video: 'media/fallback.mp4'
 
 # Stream Monitoring
-rtsp_timeout: 5  # seconds - timeout for RTSP connection
-check_interval: 2  # seconds - how often to check RTSP availability
+rtmp_timeout: 5  # seconds - timeout for RTMP connection
+check_interval: 2  # seconds - how often to check RTMP stream availability
 
 # Video Encoding Settings
 video_bitrate: '2500k'  # e.g. '1000k', '2500k', '4500k', '6000k'
