@@ -81,10 +81,16 @@ def get_stream_status():
             'rtmp_available': False
         }
 
+    # Don't check RTMP availability if already using it (would conflict with input process)
+    if stream_manager.is_rtmp_input_active:
+        rtmp_available = True
+    else:
+        rtmp_available = stream_manager.check_rtmp_stream()
+
     return {
         'running': True,
         'source': 'rtmp' if stream_manager.is_rtmp_input_active else 'fallback',
-        'rtmp_available': stream_manager.check_rtmp_stream()
+        'rtmp_available': rtmp_available
     }
 
 
