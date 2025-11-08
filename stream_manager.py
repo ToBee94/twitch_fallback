@@ -101,10 +101,10 @@ class StreamManager:
             cmd = [
                 'ffprobe',
                 '-v', 'error',
-                '-rw_timeout', str(self.config['rtmp_timeout'] * 1000000),  # microseconds
                 '-i', stream_url,
                 '-show_entries', 'stream=codec_type',
-                '-of', 'default=noprint_wrappers=1'
+                '-of', 'default=noprint_wrappers=1',
+                '-rw_timeout', str(self.config['rtmp_timeout'] * 1000000)  # microseconds
             ]
 
             result = subprocess.run(
