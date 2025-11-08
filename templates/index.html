@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Twitch Stream Manager{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Stream Status</h2>
+
+    <div id="status-container">
+        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <span class="status-indicator {% if status.running %}{% if status.source == 'rtsp' %}status-running{% else %}status-fallback{% endif %}{% else %}status-stopped{% endif %}"></span>
+            <span id="status-text" style="font-size: 18px; font-weight: 500;">
+                {% if status.running %}
+                    Stream läuft (Quelle: {{ 'RTSP' if status.source == 'rtsp' else 'Fallback' }})
+                {% else %}
+                    Stream gestoppt
+                {% endif %}
+            </span>
+        </div>
+
+        <div id="stream-info" style="margin-bottom: 20px;">
+            {% if status.running %}
+                <div class="alert alert-info">
+                    <strong>RTSP-Stream:</strong> {{ 'Verfügbar' if status.rtsp_available else 'Nicht verfügbar' }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button id="start-btn" class="btn btn-success" onclick="startStream()" {% if status.running %}disabled{% endif %}>
+                Stream starten
+            </button>
+            <button id="stop-btn" class="btn btn-danger" onclick="stopStream()" {% if not status.running %}disabled{% endif %}>
+                Stream stoppen
+            </button>
+            <button class="btn btn-secondary" onclick="updateStatus()">
+                Status aktualisieren
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Aktuelle Konfiguration</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div>
+            <h3 style="font-size: 16px; margin-bottom: 10px; color: #667eea;">Stream-Einstellungen</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">RTSP URL:</td>
+                    <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{{ config.rtsp_url }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Twitch RTMP:</td>
+                    <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{{ config.twitch_rtmp_url }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Stream Key:</td>
+                    <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{{ '•' * 20 if config.twitch_stream_key else 'Nicht gesetzt' }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div>
+            <h3 style="font-size: 16px; margin-bottom: 10px; color: #667eea;">Video-Einstellungen</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Auflösung:</td>
+                    <td style="padding: 8px 0;">{{ config.resolution }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">FPS:</td>
+                    <td style="padding: 8px 0;">{{ config.fps }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Video Bitrate:</td>
+                    <td style="padding: 8px 0;">{{ config.video_bitrate }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Audio Bitrate:</td>
+                    <td style="padding: 8px 0;">{{ config.audio_bitrate }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div>
+            <h3 style="font-size: 16px; margin-bottom: 10px; color: #667eea;">Fallback-Einstellungen</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Fallback-Typ:</td>
+                    <td style="padding: 8px 0;">{{ 'Bild' if config.fallback_type == 'image' else 'Video' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Fallback Bild:</td>
+                    <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{{ config.fallback_image }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Fallback Video:</td>
+                    <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{{ config.fallback_video }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div>
+            <h3 style="font-size: 16px; margin-bottom: 10px; color: #667eea;">Erweiterte Einstellungen</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">RTSP Timeout:</td>
+                    <td style="padding: 8px 0;">{{ config.rtsp_timeout }}s</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Check Interval:</td>
+                    <td style="padding: 8px 0;">{{ config.check_interval }}s</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <a href="/config" class="btn btn-primary">Konfiguration bearbeiten</a>
+    </div>
+</div>
+
+<div id="message-container"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showMessage(message, type) {
+        const container = document.getElementById('message-container');
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+        container.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+        setTimeout(() => {
+            container.innerHTML = '';
+        }, 5000);
+    }
+
+    function startStream() {
+        fetch('/api/start', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    setTimeout(updateStatus, 1000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Fehler: ' + error, 'error');
+            });
+    }
+
+    function stopStream() {
+        fetch('/api/stop', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    setTimeout(updateStatus, 1000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Fehler: ' + error, 'error');
+            });
+    }
+
+    function updateStatus() {
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                const indicator = document.querySelector('.status-indicator');
+                const statusText = document.getElementById('status-text');
+                const streamInfo = document.getElementById('stream-info');
+                const startBtn = document.getElementById('start-btn');
+                const stopBtn = document.getElementById('stop-btn');
+
+                if (data.running) {
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+
+                    if (data.source === 'rtsp') {
+                        indicator.className = 'status-indicator status-running';
+                        statusText.textContent = 'Stream läuft (Quelle: RTSP)';
+                    } else {
+                        indicator.className = 'status-indicator status-fallback';
+                        statusText.textContent = 'Stream läuft (Quelle: Fallback)';
+                    }
+
+                    streamInfo.innerHTML = `
+                        <div class="alert alert-info">
+                            <strong>RTSP-Stream:</strong> ${data.rtsp_available ? 'Verfügbar' : 'Nicht verfügbar'}
+                        </div>
+                    `;
+                } else {
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    indicator.className = 'status-indicator status-stopped';
+                    statusText.textContent = 'Stream gestoppt';
+                    streamInfo.innerHTML = '';
+                }
+            });
+    }
+
+    // Auto-Update alle 5 Sekunden
+    setInterval(updateStatus, 5000);
+</script>
+{% endblock %}

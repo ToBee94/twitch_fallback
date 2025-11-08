@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Konfiguration - Twitch Stream Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 5px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .form-group small {
+        display: block;
+        margin-top: 5px;
+        color: #718096;
+        font-size: 12px;
+    }
+
+    .form-section {
+        margin-bottom: 30px;
+        padding-bottom: 30px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .form-section:last-child {
+        border-bottom: none;
+    }
+
+    .form-section h3 {
+        color: #667eea;
+        font-size: 18px;
+        margin-bottom: 20px;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Stream-Konfiguration</h2>
+
+    <form method="POST" action="/config">
+        <div class="form-section">
+            <h3>Stream-Quellen</h3>
+
+            <div class="form-group">
+                <label for="rtsp_url">RTSP URL (OBS)</label>
+                <input type="text" id="rtsp_url" name="rtsp_url" value="{{ config.rtsp_url }}" required>
+                <small>Die RTSP-URL von deinem OBS-Stream (z.B. rtsp://localhost:8554/live)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="twitch_rtmp_url">Twitch RTMP Server</label>
+                <input type="text" id="twitch_rtmp_url" name="twitch_rtmp_url" value="{{ config.twitch_rtmp_url }}" required>
+                <small>Twitch RTMP-Server (Standard: rtmp://live.twitch.tv/app)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="twitch_stream_key">Twitch Stream Key</label>
+                <input type="password" id="twitch_stream_key" name="twitch_stream_key" value="{{ config.twitch_stream_key }}" required>
+                <small>Dein Twitch Stream Key (wird verschlüsselt gespeichert)</small>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Fallback-Einstellungen</h3>
+
+            <div class="form-group">
+                <label for="fallback_type">Fallback-Typ</label>
+                <select id="fallback_type" name="fallback_type" required>
+                    <option value="image" {% if config.fallback_type == 'image' %}selected{% endif %}>Bild (Standbild)</option>
+                    <option value="video" {% if config.fallback_type == 'video' %}selected{% endif %}>Video (Loop)</option>
+                </select>
+                <small>Wähle, ob ein Bild oder Video als Fallback angezeigt werden soll</small>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fallback_image">Fallback-Bild Pfad</label>
+                    <input type="text" id="fallback_image" name="fallback_image" value="{{ config.fallback_image }}">
+                    <small>Pfad zum Fallback-Bild (z.B. fallback.jpg)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="fallback_video">Fallback-Video Pfad</label>
+                    <input type="text" id="fallback_video" name="fallback_video" value="{{ config.fallback_video }}">
+                    <small>Pfad zum Fallback-Video (z.B. fallback.mp4)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Video-Einstellungen</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="resolution">Auflösung</label>
+                    <select id="resolution" name="resolution" required>
+                        <option value="1920x1080" {% if config.resolution == '1920x1080' %}selected{% endif %}>1920x1080 (Full HD)</option>
+                        <option value="1280x720" {% if config.resolution == '1280x720' %}selected{% endif %}>1280x720 (HD)</option>
+                        <option value="854x480" {% if config.resolution == '854x480' %}selected{% endif %}>854x480 (SD)</option>
+                        <option value="640x360" {% if config.resolution == '640x360' %}selected{% endif %}>640x360 (Low)</option>
+                    </select>
+                    <small>Stream-Auflösung</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="fps">Framerate (FPS)</label>
+                    <select id="fps" name="fps" required>
+                        <option value="60" {% if config.fps == 60 %}selected{% endif %}>60 FPS</option>
+                        <option value="30" {% if config.fps == 30 %}selected{% endif %}>30 FPS</option>
+                        <option value="25" {% if config.fps == 25 %}selected{% endif %}>25 FPS</option>
+                        <option value="24" {% if config.fps == 24 %}selected{% endif %}>24 FPS</option>
+                    </select>
+                    <small>Bilder pro Sekunde</small>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="video_bitrate">Video Bitrate</label>
+                    <input type="text" id="video_bitrate" name="video_bitrate" value="{{ config.video_bitrate }}" required>
+                    <small>Video-Bitrate (z.B. 2500k, 4500k, 6000k)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="audio_bitrate">Audio Bitrate</label>
+                    <input type="text" id="audio_bitrate" name="audio_bitrate" value="{{ config.audio_bitrate }}" required>
+                    <small>Audio-Bitrate (z.B. 128k, 160k, 192k)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Erweiterte Einstellungen</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="rtsp_timeout">RTSP Timeout (Sekunden)</label>
+                    <input type="number" id="rtsp_timeout" name="rtsp_timeout" value="{{ config.rtsp_timeout }}" min="1" max="30" required>
+                    <small>Timeout für RTSP-Verbindung (1-30 Sekunden)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="check_interval">Check Interval (Sekunden)</label>
+                    <input type="number" id="check_interval" name="check_interval" value="{{ config.check_interval }}" min="1" max="10" required>
+                    <small>Wie oft RTSP-Verfügbarkeit geprüft wird (1-10 Sekunden)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Konfiguration speichern</button>
+            <a href="/" class="btn btn-secondary">Abbrechen</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Empfohlene Twitch-Einstellungen</h2>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background: #f7fafc;">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">Qualität</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">Auflösung</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">FPS</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">Video Bitrate</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">Audio Bitrate</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;"><strong>Niedrig</strong></td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">854x480</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">30</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">1000k</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">128k</td>
+            </tr>
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;"><strong>Mittel</strong></td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">1280x720</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">30</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">2500k</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">160k</td>
+            </tr>
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;"><strong>Hoch (Partner)</strong></td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">1920x1080</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">60</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">6000k</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">160k</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div style="margin-top: 15px;">
+        <small style="color: #718096;">
+            <strong>Hinweis:</strong> Twitch begrenzt die maximale Bitrate auf ca. 6000 kbit/s.
+            Für Nicht-Partner wird eine Bitrate von 2500-4500 kbit/s empfohlen.
+        </small>
+    </div>
+</div>
+{% endblock %}
