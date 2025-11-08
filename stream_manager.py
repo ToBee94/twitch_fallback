@@ -333,17 +333,20 @@ class StreamManager:
         logger.info("Stream monitoring started")
 
         while not self.shutdown_event.is_set():
-            rtmp_available = self.check_rtmp_stream()
+            # Only check RTMP availability if we're NOT already using it
+            # (to avoid conflicts with the input process reading from the same stream)
+            if self.is_rtmp_input_active:
+                rtmp_available = True  # Assume it's available if we're using it
+            else:
+                rtmp_available = self.check_rtmp_stream()
 
             # Switch to RTMP input if available and not active
             if rtmp_available and not self.is_rtmp_input_active:
                 logger.info("RTMP stream from OBS detected, switching from fallback to RTMP...")
                 self.start_input_stream(use_rtmp_input=True)
 
-            # Switch to fallback if RTMP not available but active
-            elif not rtmp_available and self.is_rtmp_input_active:
-                logger.warning("RTMP stream from OBS lost, switching to fallback...")
-                self.start_input_stream(use_rtmp_input=False)
+            # Don't actively check if RTMP is lost - let the process crash detection handle it
+            # (checking while input is reading causes conflicts)
 
             # Check if input process is still running
             if self.input_process and self.input_process.poll() is not None:
