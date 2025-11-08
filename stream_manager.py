@@ -167,6 +167,7 @@ class StreamManager:
 
             cmd = [
                 'ffmpeg',
+                '-err_detect', 'ignore_err',  # Ignore decoder errors
                 '-i', stream_url,
             ]
 
