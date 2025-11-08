@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # Alternative NGINX RTMP Server (different image)
+  rtmp:
+    image: alfg/nginx-rtmp:latest
+    container_name: twitch_rtmp_server_alt
+    ports:
+      - "1935:1935"
+      - "8080:8080"
+    volumes:
+      - ./nginx-working.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    networks:
+      - twitch_network
+
+  # Twitch Stream Manager Application
+  stream_manager:
+    build: .
+    container_name: twitch_stream_manager
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config.yml:/app/config.yml
+      - ./media:/app/media
+      - ./users.yml:/app/users.yml
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - rtmp
+    restart: unless-stopped
+    networks:
+      - twitch_network
+
+networks:
+  twitch_network:
+    driver: bridge
