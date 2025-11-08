@@ -16,7 +16,7 @@ import yaml
 from threading import Thread, Event
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -116,11 +116,13 @@ class StreamManager:
             )
 
             if result.returncode != 0:
-                logger.debug(f"RTMP check failed for {stream_url}: {result.stderr.decode()}")
+                logger.warning(f"RTMP check failed for {stream_url}: {result.stderr.decode()}")
+            else:
+                logger.info(f"RTMP check successful for {stream_url}")
 
             return result.returncode == 0
         except Exception as e:
-            logger.debug(f"RTMP input check failed: {e}")
+            logger.error(f"RTMP input check failed: {e}")
             return False
 
     def _build_audio_encoding_options(self):
