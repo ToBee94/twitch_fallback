@@ -101,7 +101,7 @@ class StreamManager:
             cmd = [
                 'ffprobe',
                 '-v', 'error',
-                '-timeout', str(self.config['rtmp_timeout'] * 1000000),  # microseconds
+                '-rw_timeout', str(self.config['rtmp_timeout'] * 1000000),  # microseconds
                 '-i', stream_url,
                 '-show_entries', 'stream=codec_type',
                 '-of', 'default=noprint_wrappers=1'
@@ -163,7 +163,7 @@ class StreamManager:
 
             cmd = [
                 'ffmpeg',
-                '-timeout', str(self.config['rtmp_timeout'] * 1000000),
+                '-rw_timeout', str(self.config['rtmp_timeout'] * 1000000),
                 '-i', stream_url,
             ]
 
