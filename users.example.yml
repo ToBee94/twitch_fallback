@@ -1,0 +1,16 @@
+# User Authentication Configuration
+# Copy this file to users.yml and configure your users
+
+users:
+  - username: 'admin'
+    # Password is hashed with bcrypt
+    # Default password: 'admin' (please change!)
+    # Generate new hash with: python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('your_password'))"
+    password_hash: 'scrypt:32768:8:1$EXAMPLE$hash'
+    role: 'admin'
+
+# RTSP Token Configuration
+rtsp_tokens:
+  - token: 'your-secure-rtsp-token-here'
+    description: 'OBS Studio'
+    enabled: true

@@ -1,0 +1,27 @@
+# Twitch Stream Manager Configuration
+
+# RTSP Input Configuration (from OBS or other source)
+rtsp_url: 'rtsp://localhost:8554/live'
+
+# Twitch Streaming Configuration
+twitch_rtmp_url: 'rtmp://live.twitch.tv/app'
+twitch_stream_key: 'YOUR_TWITCH_STREAM_KEY_HERE'
+
+# Fallback Configuration
+fallback_type: 'image'  # Options: 'image' or 'video'
+fallback_image: 'media/fallback.jpg'
+fallback_video: 'media/fallback.mp4'
+
+# Stream Monitoring
+rtsp_timeout: 5  # seconds - timeout for RTSP connection
+check_interval: 2  # seconds - how often to check RTSP availability
+
+# Video Encoding Settings
+video_bitrate: '2500k'  # e.g. '1000k', '2500k', '4500k', '6000k'
+audio_bitrate: '160k'   # e.g. '128k', '160k', '192k'
+fps: 30                 # frames per second (24, 25, 30, 60)
+resolution: '1920x1080' # e.g. '854x480', '1280x720', '1920x1080'
+
+# Recommended Twitch Settings:
+# Non-Partner: 1280x720, 30fps, 2500k video, 160k audio
+# Partner: 1920x1080, 60fps, 6000k video, 160k audio
