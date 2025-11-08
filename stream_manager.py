@@ -129,20 +129,16 @@ class StreamManager:
             return False
 
     def _build_audio_encoding_options(self):
-        """Build audio encoding options for all 3 audio tracks from OBS"""
+        """Build audio encoding options - single track for now due to codec compatibility"""
         options = []
 
-        # Always encode 3 audio tracks (Twitch Partner multi-audio)
-        # Track 0: Stream + VOD
-        # Track 1: Stream only (muted in VOD)
-        # Track 2: VOD only (muted in stream)
-        for i in range(3):
-            options.extend([
-                f'-c:a:{i}', 'aac',
-                f'-b:a:{i}', self.config['audio_bitrate'],
-                f'-ar:{i}', '44100',
-                f'-ac:{i}', '2'
-            ])
+        # Single audio track (OBS sends unsupported codecs for tracks 2+3)
+        options.extend([
+            '-c:a', 'aac',
+            '-b:a', self.config['audio_bitrate'],
+            '-ar', '44100',
+            '-ac', '2'
+        ])
 
         return options
 
@@ -163,12 +159,10 @@ class StreamManager:
             for audio_source in self.config.get('audio_sources', []):
                 cmd.extend(['-i', audio_source])
 
-            # Map video and all audio streams
+            # Map video and only the working audio streams (skip codec 9 which is not supported)
             cmd.extend([
-                '-map', '0:v:0',  # First video stream
-                '-map', '0:a:0',  # First audio stream
-                '-map', '0:a:1?',  # Second audio stream (optional)
-                '-map', '0:a:2?',  # Third audio stream (optional)
+                '-map', '0:v:0',  # Video stream
+                '-map', '0:a:0',  # First audio stream (AAC - working)
             ])
 
             # Video encoding
