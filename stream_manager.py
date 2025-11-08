@@ -92,36 +92,40 @@ class StreamManager:
         sys.exit(0)
 
     def check_rtmp_stream(self):
-        """Check if RTMP stream from OBS is available"""
+        """Check if RTMP stream from OBS is available using NGINX stat API"""
         try:
-            # Use ffprobe to check RTMP stream
-            # For RTMP, we need to specify the stream name (obs) explicitly
-            stream_url = f"{self.config['rtmp_input_url']}/obs"
+            # Use NGINX stat API instead of ffprobe (doesn't block when input is reading)
+            import requests
 
-            cmd = [
-                'ffprobe',
-                '-v', 'error',
-                '-i', stream_url,
-                '-show_entries', 'stream=codec_type',
-                '-of', 'default=noprint_wrappers=1',
-                '-rw_timeout', str(self.config['rtmp_timeout'] * 1000000)  # microseconds
-            ]
+            response = requests.get('http://rtmp:8080/stat', timeout=2)
 
-            result = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=self.config['rtmp_timeout'] + 2
-            )
+            if response.status_code == 200:
+                # Check if stream 'obs' exists in application 'input'
+                xml_content = response.text
 
-            if result.returncode != 0:
-                logger.warning(f"RTMP check failed for {stream_url}: {result.stderr.decode()}")
+                # Simple XML parsing - check if both <name>input</name> and <name>obs</name> exist
+                # and that obs is a child of input application
+                if '<application>' in xml_content:
+                    # Find input application block
+                    import re
+                    app_pattern = r'<application>.*?<name>input</name>.*?</application>'
+                    app_match = re.search(app_pattern, xml_content, re.DOTALL)
+
+                    if app_match:
+                        app_block = app_match.group(0)
+                        # Check if 'obs' stream exists in this application
+                        if '<name>obs</name>' in app_block and '<live>' in app_block:
+                            logger.info("RTMP stream 'obs' is active in 'input' application")
+                            return True
+
+                logger.debug("RTMP stream 'obs' not found in NGINX stat")
+                return False
             else:
-                logger.info(f"RTMP check successful for {stream_url}")
+                logger.warning(f"NGINX stat endpoint returned {response.status_code}")
+                return False
 
-            return result.returncode == 0
         except Exception as e:
-            logger.error(f"RTMP input check failed: {e}")
+            logger.debug(f"RTMP check via NGINX stat failed: {e}")
             return False
 
     def _build_audio_encoding_options(self):
