@@ -174,6 +174,12 @@ class StreamManager:
             for audio_source in self.config.get('audio_sources', []):
                 cmd.extend(['-i', audio_source])
 
+            # Map only first video and first audio stream (avoid codec issues with multiple tracks)
+            cmd.extend([
+                '-map', '0:v:0',
+                '-map', '0:a:0',
+            ])
+
             # Video encoding
             cmd.extend([
                 '-c:v', 'libx264',
