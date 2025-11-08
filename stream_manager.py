@@ -95,11 +95,15 @@ class StreamManager:
         """Check if RTMP stream from OBS is available"""
         try:
             # Use ffprobe to check RTMP stream
+            # For RTMP, we need to specify the stream name (obs) explicitly
+            stream_url = f"{self.config['rtmp_input_url']}/obs"
+
             cmd = [
                 'ffprobe',
                 '-v', 'error',
+                '-rtmp_live', 'live',
                 '-timeout', str(self.config['rtmp_timeout'] * 1000000),  # microseconds
-                '-i', self.config['rtmp_input_url'],
+                '-i', stream_url,
                 '-show_entries', 'stream=codec_type',
                 '-of', 'default=noprint_wrappers=1'
             ]
@@ -110,6 +114,9 @@ class StreamManager:
                 stderr=subprocess.PIPE,
                 timeout=self.config['rtmp_timeout'] + 2
             )
+
+            if result.returncode != 0:
+                logger.debug(f"RTMP check failed for {stream_url}: {result.stderr.decode()}")
 
             return result.returncode == 0
         except Exception as e:
@@ -150,10 +157,14 @@ class StreamManager:
         """Build FFmpeg command for RTMP input from OBS or fallback to local RTMP"""
         if use_rtmp_input:
             # RTMP stream from OBS to local RTMP buffer
+            # Construct full stream URL with stream name
+            stream_url = f"{self.config['rtmp_input_url']}/obs"
+
             cmd = [
                 'ffmpeg',
+                '-rtmp_live', 'live',
                 '-timeout', str(self.config['rtmp_timeout'] * 1000000),
-                '-i', self.config['rtmp_input_url'],
+                '-i', stream_url,
             ]
 
             # Add additional audio sources if configured
