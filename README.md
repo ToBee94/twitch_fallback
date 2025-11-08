@@ -6,6 +6,7 @@ Ein professioneller Stream Manager, der RTSP-Streams von OBS zu Twitch weiterlei
 
 - 🎥 **RTSP zu Twitch**: Leitet RTSP-Streams (z.B. von OBS) nahtlos an Twitch weiter
 - 🔄 **Automatischer Fallback**: Wechselt bei Stream-Unterbrechung zu Fallback-Media (Bild oder Video)
+- 🎵 **Multi-Audio-Tracks**: Separate Tonspuren für Stream und VOD (Twitch Partner)
 - 🌐 **Web-Interface**: Benutzerfreundliche Browser-Konfiguration
 - 📁 **Media-Galerie**: Upload und Verwaltung von Fallback-Bildern und -Videos
 - 🔒 **Authentifizierung**: Login-Schutz für die Web-UI (geplant)
@@ -104,13 +105,38 @@ Um OBS als RTSP-Quelle zu nutzen, benötigst du ein RTSP-Plugin:
 
 ### Empfohlene Twitch-Einstellungen
 
-| Qualität | Auflösung | FPS | Video Bitrate | Audio Bitrate |
-|----------|-----------|-----|---------------|---------------|
-| Niedrig | 854x480 | 30 | 1000k | 128k |
-| Mittel | 1280x720 | 30 | 2500k | 160k |
-| Hoch (Partner) | 1920x1080 | 60 | 6000k | 160k |
+| Qualität | Auflösung | FPS | Video Bitrate | Audio Bitrate | Audio Tracks |
+|----------|-----------|-----|---------------|---------------|--------------|
+| Niedrig | 854x480 | 30 | 1000k | 128k | 1 |
+| Mittel | 1280x720 | 30 | 2500k | 160k | 1 |
+| Hoch (Partner) | 1920x1080 | 60 | 6000k | 160k | 1-3 |
 
 **Hinweis:** Twitch begrenzt die maximale Bitrate auf ca. 6000 kbit/s. Für Nicht-Partner wird 2500-4500 kbit/s empfohlen.
+
+### Multi-Audio-Tracks (Twitch Partner)
+
+Twitch Partner können bis zu 3 separate Audiostreams verwenden:
+
+- **Track 1**: Haupt-Audio (Stream + VOD) - Immer aktiv
+- **Track 2**: Stream-Only Audio (nur Live, nicht im VOD) - Optional
+- **Track 3**: VOD-Only Audio (nur in Aufzeichnung, nicht live) - Optional
+
+**Anwendungsfälle:**
+- Urheberrechtlich geschützte Musik nur im Stream (Track 2), die im VOD stumm geschaltet wird
+- Alternative Kommentar-Spur nur für VOD (Track 3)
+- Separate Mikrofon- und Desktop-Audio-Spuren
+
+**Konfiguration:**
+```yaml
+multi_audio_enabled: true
+audio_tracks: 3
+audio_sources:
+  - 'audio=Mikrofon'  # Zusätzliche Audio-Quelle
+  - 'audio=Desktop'   # Desktop-Audio
+```
+
+**RTSP-Anforderung:**
+Der RTSP-Stream muss mehrere Audiostreams enthalten. Bei OBS kann dies über Audio-Mixer konfiguriert werden.
 
 ## API-Endpunkte
 
@@ -233,11 +259,12 @@ pytest
 pytest tests/integration
 ```
 
-## Geplante Features
+## Feature Status
 
 - ✅ Web-UI für Konfiguration
 - ✅ Media-Upload und -Galerie
 - ✅ Nahtloses Streaming
+- ✅ Multi-Audio-Track Support (Twitch Partner)
 - ⏳ Authentifizierung (Username/Password)
 - ⏳ RTSP Token-Schutz
 - ⏳ Multi-Platform Streaming (YouTube, Facebook, etc.)

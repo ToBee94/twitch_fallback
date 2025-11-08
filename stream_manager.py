@@ -58,6 +58,11 @@ class StreamManager:
         config.setdefault('fps', 30)
         config.setdefault('resolution', '1920x1080')
 
+        # Multi-audio track configuration (for Twitch Partner)
+        config.setdefault('multi_audio_enabled', False)
+        config.setdefault('audio_tracks', 1)  # 1-3 tracks supported
+        config.setdefault('audio_sources', [])  # Additional audio inputs
+
         return config
 
     def _signal_handler(self, signum, frame):
@@ -107,6 +112,36 @@ class StreamManager:
             logger.debug(f"RTSP check failed: {e}")
             return False
 
+    def _build_audio_encoding_options(self):
+        """Build audio encoding options for multi-track support"""
+        options = []
+
+        if self.config.get('multi_audio_enabled', False):
+            # Multi-track audio (Twitch Partner feature)
+            num_tracks = min(self.config.get('audio_tracks', 1), 3)  # Twitch supports max 3 tracks
+
+            for i in range(num_tracks):
+                # Map audio stream
+                options.extend(['-map', f'0:a:{i}?'])  # ? makes it optional
+
+                # Audio encoding per track
+                options.extend([
+                    f'-c:a:{i}', 'aac',
+                    f'-b:a:{i}', self.config['audio_bitrate'],
+                    f'-ar:{i}', '44100',
+                    f'-ac:{i}', '2'
+                ])
+        else:
+            # Single audio track (standard)
+            options.extend([
+                '-c:a', 'aac',
+                '-b:a', self.config['audio_bitrate'],
+                '-ar', '44100',
+                '-ac', '2'
+            ])
+
+        return options
+
     def build_input_command(self, use_rtsp=True):
         """Build FFmpeg command for RTSP or fallback to local RTMP"""
         if use_rtsp:
@@ -116,7 +151,14 @@ class StreamManager:
                 '-rtsp_transport', 'tcp',
                 '-timeout', str(self.config['rtsp_timeout'] * 1000000),
                 '-i', self.config['rtsp_url'],
-                # Video encoding
+            ]
+
+            # Add additional audio sources if configured
+            for audio_source in self.config.get('audio_sources', []):
+                cmd.extend(['-i', audio_source])
+
+            # Video encoding
+            cmd.extend([
                 '-c:v', 'libx264',
                 '-preset', 'veryfast',
                 '-b:v', self.config['video_bitrate'],
@@ -126,15 +168,17 @@ class StreamManager:
                 '-r', str(self.config['fps']),
                 '-g', str(self.config['fps'] * 2),  # keyframe every 2 seconds
                 '-pix_fmt', 'yuv420p',
-                # Audio encoding
-                '-c:a', 'aac',
-                '-b:a', self.config['audio_bitrate'],
-                '-ar', '44100',
-                '-ac', '2',
-                # Output to local RTMP
+            ])
+
+            # Audio encoding (with multi-track support)
+            cmd.extend(self._build_audio_encoding_options())
+
+            # Output to local RTMP
+            cmd.extend([
                 '-f', 'flv',
                 f'{self.local_rtmp}'
-            ]
+            ])
+            return cmd
         else:
             # Fallback (image or video) to local RTMP
             if self.config['fallback_type'] == 'image':
@@ -143,10 +187,18 @@ class StreamManager:
                     '-loop', '1',
                     '-framerate', str(self.config['fps']),
                     '-i', self.config['fallback_image'],
-                    # Generate silent audio
-                    '-f', 'lavfi',
-                    '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
-                    # Video encoding
+                ]
+
+                # Generate silent audio for multi-track if enabled
+                if self.config.get('multi_audio_enabled', False):
+                    num_tracks = min(self.config.get('audio_tracks', 1), 3)
+                    for i in range(num_tracks):
+                        cmd.extend(['-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100'])
+                else:
+                    cmd.extend(['-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100'])
+
+                # Video encoding
+                cmd.extend([
                     '-c:v', 'libx264',
                     '-preset', 'veryfast',
                     '-b:v', self.config['video_bitrate'],
@@ -156,22 +208,27 @@ class StreamManager:
                     '-r', str(self.config['fps']),
                     '-g', str(self.config['fps'] * 2),
                     '-pix_fmt', 'yuv420p',
-                    # Audio encoding
-                    '-c:a', 'aac',
-                    '-b:a', self.config['audio_bitrate'],
-                    '-ar', '44100',
-                    '-shortest',
-                    # Output to local RTMP
+                ])
+
+                # Audio encoding (with multi-track support)
+                cmd.extend(self._build_audio_encoding_options())
+                cmd.extend(['-shortest'])
+
+                # Output to local RTMP
+                cmd.extend([
                     '-f', 'flv',
                     f'{self.local_rtmp}'
-                ]
+                ])
             else:  # video
                 cmd = [
                     'ffmpeg',
                     '-stream_loop', '-1',  # loop video
                     '-re',  # realtime
                     '-i', self.config['fallback_video'],
-                    # Video encoding
+                ]
+
+                # Video encoding
+                cmd.extend([
                     '-c:v', 'libx264',
                     '-preset', 'veryfast',
                     '-b:v', self.config['video_bitrate'],
@@ -181,17 +238,18 @@ class StreamManager:
                     '-r', str(self.config['fps']),
                     '-g', str(self.config['fps'] * 2),
                     '-pix_fmt', 'yuv420p',
-                    # Audio encoding
-                    '-c:a', 'aac',
-                    '-b:a', self.config['audio_bitrate'],
-                    '-ar', '44100',
-                    '-ac', '2',
-                    # Output to local RTMP
+                ])
+
+                # Audio encoding (with multi-track support)
+                cmd.extend(self._build_audio_encoding_options())
+
+                # Output to local RTMP
+                cmd.extend([
                     '-f', 'flv',
                     f'{self.local_rtmp}'
-                ]
+                ])
 
-        return cmd
+            return cmd
 
     def build_relay_command(self):
         """Build FFmpeg command for relaying local RTMP to Twitch"""
