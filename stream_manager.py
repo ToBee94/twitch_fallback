@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class StreamManager:
-    def __init__(self, config_path='config.yml'):
+    def __init__(self, config_path='config.yml', register_signals=False):
         """Initialize Stream Manager with configuration"""
         self.config = self._load_config(config_path)
         self.input_process = None  # RTMP from OBS or Fallback to local RTMP
@@ -32,9 +32,14 @@ class StreamManager:
         self.is_rtmp_input_active = False
         self.local_rtmp = 'rtmp://rtmp:1935/live'  # Docker service name
 
-        # Signal handler for clean shutdown
-        signal.signal(signal.SIGINT, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
+        # Signal handler for clean shutdown (only in main thread)
+        if register_signals:
+            try:
+                signal.signal(signal.SIGINT, self._signal_handler)
+                signal.signal(signal.SIGTERM, self._signal_handler)
+            except ValueError:
+                # Signals can only be registered in main thread
+                logger.warning("Cannot register signal handlers (not in main thread)")
 
     def _load_config(self, config_path):
         """Load configuration from YAML file"""
@@ -342,6 +347,26 @@ class StreamManager:
 
             time.sleep(self.config['check_interval'])
 
+    def stop(self):
+        """Stop the stream manager gracefully"""
+        logger.info("Stopping stream manager...")
+        self.shutdown_event.set()
+
+        # Terminate processes
+        if self.input_process:
+            self.input_process.terminate()
+            try:
+                self.input_process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self.input_process.kill()
+
+        if self.relay_process:
+            self.relay_process.terminate()
+            try:
+                self.relay_process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self.relay_process.kill()
+
     def run(self):
         """Main loop: Start stream and monitoring"""
         logger.info("Starting Twitch Stream Manager...")
@@ -367,15 +392,13 @@ class StreamManager:
             logger.error(f"Error in stream manager: {e}")
             raise
         finally:
-            if self.input_process:
-                self.input_process.terminate()
-            if self.relay_process:
-                self.relay_process.terminate()
+            self.stop()
 
 
 if __name__ == "__main__":
     try:
-        manager = StreamManager()
+        # Register signals when running as main program
+        manager = StreamManager(register_signals=True)
         manager.run()
     except KeyboardInterrupt:
         logger.info("Program terminated by user")

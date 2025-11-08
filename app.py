@@ -275,12 +275,10 @@ def stop_stream():
         return jsonify({'success': False, 'message': 'Kein Stream aktiv'}), 400
 
     try:
-        stream_manager.shutdown_event.set()
-        if stream_manager.input_process:
-            stream_manager.input_process.terminate()
-        if stream_manager.relay_process:
-            stream_manager.relay_process.terminate()
+        # Use the stop() method for clean shutdown
+        stream_manager.stop()
 
+        # Wait for thread to finish
         stream_thread.join(timeout=5)
         stream_manager = None
         stream_thread = None
