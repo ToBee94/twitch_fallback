@@ -348,12 +348,19 @@ class StreamManager:
 
             # Check if input process is still running
             if self.input_process and self.input_process.poll() is not None:
-                logger.error("Input FFmpeg process unexpectedly terminated, restarting...")
+                # Read stderr to see why it crashed
+                stderr_output = self.input_process.stderr.read().decode('utf-8', errors='ignore')
+                logger.error(f"Input FFmpeg process unexpectedly terminated!")
+                logger.error(f"FFmpeg stderr: {stderr_output[-500:]}")  # Last 500 chars
                 self.start_input_stream(use_rtmp_input=rtmp_available)
 
             # Check if relay process is still running (critical!)
             if self.relay_process and self.relay_process.poll() is not None:
-                logger.error("Relay FFmpeg process unexpectedly terminated, restarting...")
+                # Read stderr to see why it crashed
+                stderr_output = self.relay_process.stderr.read().decode('utf-8', errors='ignore')
+                logger.error(f"Relay FFmpeg process unexpectedly terminated!")
+                logger.error(f"FFmpeg stderr: {stderr_output[-500:]}")  # Last 500 chars
+                self.relay_process = None
                 self.start_relay_stream()
 
             time.sleep(self.config['check_interval'])
