@@ -163,7 +163,6 @@ class StreamManager:
 
             cmd = [
                 'ffmpeg',
-                '-rw_timeout', str(self.config['rtmp_timeout'] * 1000000),
                 '-i', stream_url,
             ]
 
