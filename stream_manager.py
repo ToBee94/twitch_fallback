@@ -165,10 +165,12 @@ class StreamManager:
                 '-map', '0:a:0',  # First audio stream (AAC - working)
             ])
 
-            # Video encoding
+            # Video encoding for Twitch
             cmd.extend([
                 '-c:v', 'libx264',
                 '-preset', 'veryfast',
+                '-profile:v', 'main',  # Twitch requirement
+                '-level', '4.1',  # Twitch requirement
                 '-b:v', self.config['video_bitrate'],
                 '-maxrate', self.config['video_bitrate'],
                 '-bufsize', str(int(self.config['video_bitrate'].rstrip('k')) * 2) + 'k',
@@ -176,6 +178,7 @@ class StreamManager:
                 '-r', str(self.config['fps']),
                 '-g', str(self.config['fps'] * 2),  # keyframe every 2 seconds
                 '-pix_fmt', 'yuv420p',
+                '-x264opts', 'keyint=' + str(self.config['fps'] * 2) + ':min-keyint=' + str(self.config['fps']),
             ])
 
             # Audio encoding (with multi-track support)
